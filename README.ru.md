@@ -1,5 +1,5 @@
 ## shm_lib
-[English](https://) | [Документация](https://)
+[English](https://github.com/sdkiyo/shm_lib/blob/main/README.md) | [Документация](https://github.com/sdkiyo/shm_lib/blob/main/docs/technical_documentation.md)
 ## Описание
 Небольшая библиотека-обёртка написанная на языке C для простой работы с разделяемой памятью.
 ___

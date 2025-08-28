@@ -1,5 +1,5 @@
 ## shm_lib
-[Русский](https://) | [Documentation](https://)
+[Русский](https://github.com/sdkiyo/shm_lib/blob/main/README.ru.md) | [Documentation](https://github.com/sdkiyo/shm_lib/blob/main/docs/technical_documentation.md)
 ## Description
 A small wrapper library, written in C for simple work with shared memory.
 ___
