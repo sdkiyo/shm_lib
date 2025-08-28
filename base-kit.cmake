@@ -1,12 +1,9 @@
-set ( "VERSION_RELEASE" 0 )
-set ( "VERSION_DEV" 1 )
-set ( "ver" ${VERSION_RELEASE}.${VERSION_DEV} )
+set ("VERSION_RELEASE" 0)
+set ("VERSION_DEV" 1)
+set ("ver" ${VERSION_RELEASE}.${VERSION_DEV})
 
-set ( CMAKE_C_STANDARD 23 )
+set (CMAKE_C_STANDARD 23)
 
-set ( "BIN_DIR" bin )
-set ( EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/${BIN_DIR} )
-set ( LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/${BIN_DIR}/lib )
 
 string(ASCII 27 Esc)
 set(rc		"${Esc}[0m")# reset_color

@@ -1,0 +1,9 @@
+#include "../../include/shm_bridge.h"
+
+int main()
+{
+	fprintf(stderr, "\033[2mbridge initialization.\033[0m\n");
+	ShmBridge bridge = create_shm_bridge("test_shm", "/test_sem", 64, "hello world, i'm so back. 12345 asdkl;--.--.-. **** ff |||\n");
+	printf("\033[34mbase_size = %d\n", bridge.shm_base_size);
+	return 0;
+}

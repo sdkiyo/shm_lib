@@ -2,41 +2,41 @@
 #ifndef _SHM_API_H_
 #define _SHM_API_H_
 
+
+#ifndef _NOT_SHM_LIB_
 #include "shm_includes.h"
+#else
+#include <dlfcn.h>
+#include <sys/types.h>
+#include <semaphore.h>
+#include <stdint.h>
+#include <stdio.h>
+#include "shm_defines.h"
+#endif
+
+typedef struct SharedMemoryInfo {
+	char shmName[SHM_NAME_LEN];
+	char shmInfoName[SHM_NAME_LEN+INFO_SUFFIX_LEN];
+	sem_t *pSemaphore;
+	off_t shmByteSize;
+	void *pMappedShmAddr;
+	void *pMappedShmInfoAddr;
+	int shmFileDescriptor;
+	int shmInfoFileDescriptor;
+} SharedMemoryInfo;
 
 
-typedef struct ShmChannelData {
-	sem_t *semaphore;
-	int shm;
-} ShmChannelData;
+#ifndef _NOT_SHM_LIB_
+int shm_simple_open(struct SharedMemoryInfo *shmInfo);
 
+int shm_write(struct SharedMemoryInfo *shmInfo, const void const *data, const size_t data_byte_size);
 
-sem_t* create_task_semaphore();
-sem_t* create_msg_semaphore();
-sem_t* create_err_semaphore();
-sem_t* create_out_semaphore();
+int shm_destroy(struct SharedMemoryInfo *shmInfo);
+#else
+typedef void (*shmSimpleOpen_t)(struct SharedMemoryInfo *shmInfo);
+typedef void (*shmWrite_t)(struct SharedMemoryInfo *shmInfo, const void const *data, const size_t data_byte_size);
+typedef void (*shmDestroy_t)(struct SharedMemoryInfo *shmInfo);
+#endif
 
-void open_task_semaphore( sem_t *sem );
-void open_msg_semaphore( sem_t *sem );
-void open_err_semaphore( sem_t *sem );
-void open_out_semaphore( sem_t *sem );
-
-void drop_semaphore( sem_t *sem );
-
-
-
-void open_task_shm( int *shm );
-void open_msg_shm( int *shm );
-void open_err_shm( int *shm );
-void open_out_shm( int *shm );
-
-void write_shm( const int shm, const char msg[] );
-void read_shm( const int shm, char *addr );
-void print_shm( const int shm );
-
-void delete_task_shm();
-void delete_msg_shm();
-void delete_err_shm();
-void delete_out_shm();
 
 #endif

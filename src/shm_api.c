@@ -1,186 +1,106 @@
 #include "../include/shm_api.h"
 
 
-inline sem_t* create_task_semaphore() {
-	errno = 0;
-	sem_t *sem = sem_open(TASK_SEMAPHORE_NAME, O_CREAT, 0777, 0);
-	if ( sem == SEM_FAILED ) {
-		fprintf(stderr, "\033[31msem_open() failed. in create_task_semaphore(). errno: %s\033[0m\n", strerror(errno));
+int shm_simple_open(struct SharedMemoryInfo *shmInfo)
+{
+	if (strlen(shmInfo->shmName) > 8) {
+		fprintf(stderr, "\033[33mThe name length for shared memory exceeds the allowed value, this may lead to undefined behavior.\033[0m\n");
 	}
-	return sem;
-}
-inline sem_t* create_msg_semaphore() {
-	errno = 0;
-	sem_t *sem = sem_open(MSG_SEMAPHORE_NAME, O_CREAT, 0777, 0);
-	if ( sem == SEM_FAILED ) {
-		fprintf(stderr, "\033[31msem_open() failed. in create_msg_semaphore(). errno: %s\033[0m\n", strerror(errno));
-	}
-	return sem;
-}
-inline sem_t* create_err_semaphore() {
-	errno = 0;
-	sem_t *sem = sem_open(ERR_SEMAPHORE_NAME, O_CREAT, 0777, 0);
-	if ( sem == SEM_FAILED ) {
-		fprintf(stderr, "\033[31msem_open() failed. in create_err_semaphore(). errno: %s\033[0m\n", strerror(errno));
-	}
-	return sem;
-}
-inline sem_t* create_out_semaphore() {
-	errno = 0;
-	sem_t *sem = sem_open(OUT_SEMAPHORE_NAME, O_CREAT, 0777, 0);
-	if ( sem == SEM_FAILED ) {
-		fprintf(stderr, "\033[31msem_open() failed. in create_out_semaphore(). errno: %s\033[0m\n", strerror(errno));
-	}
-	return sem;
-}
 
-inline void open_task_semaphore( sem_t *sem ) {
 	errno = 0;
-	if ( (sem = sem_open(TASK_SEMAPHORE_NAME, 0)) == -1 ) {
-		fprintf(stderr, "\033[31msem_open() failed. in open_task_semaphore(). errno: %s\033[0m\n", strerror(errno));
-	}
-}
-inline void open_msg_semaphore( sem_t *sem ) {
-	errno = 0;
-	if ( (sem = sem_open(MSG_SEMAPHORE_NAME, 0)) == -1 ) {
-		fprintf(stderr, "\033[31msem_open() failed. in open_msg_semaphore(). errno: %s\033[0m\n", strerror(errno));
-	}
-}
-inline void open_err_semaphore( sem_t *sem ) {
-	errno = 0;
-	if ( (sem = sem_open(ERR_SEMAPHORE_NAME, 0)) == -1 ) {
-		fprintf(stderr, "\033[31msem_open() failed. in open_err_semaphore(). errno: %s\033[0m\n", strerror(errno));
-	}
-}
-inline void open_out_semaphore( sem_t *sem ) {
-	errno = 0;
-	if ( (sem = sem_open(OUT_SEMAPHORE_NAME, 0)) == -1 ) {
-		fprintf(stderr, "\033[31msem_open() failed. in open_out_semaphore(). errno: %s\033[0m\n", strerror(errno));
-	}
-}
+	int return_value = 0;
 
-inline void drop_semaphore( sem_t *sem ) {
-	errno = 0;
-	if ( sem_post( sem ) == -1 ) {
-		fprintf(stderr, "\033[31msem_post() failed. in drop_semaphore(). errno: %s\033[0m\n", strerror(errno));
+	shmInfo->pSemaphore = sem_open(shmInfo->shmName, O_CREAT, 0777, 1);
+	check_sem_return_value(shmInfo->pSemaphore, "sem_open() failed. in shm_simple_open().");
+
+	strcpy(shmInfo->shmInfoName, shmInfo->shmName);
+	strcat(shmInfo->shmInfoName, SHM_INFO_SUFFIX);
+
+	return_value = sem_wait(shmInfo->pSemaphore);
+	check_return_value(return_value, "sem_wait() failed. in shm_simple_open().");
+
+	shmInfo->shmInfoFileDescriptor = shm_open(shmInfo->shmInfoName, O_CREAT|O_RDWR, 0777);
+	check_return_value(shmInfo->shmInfoFileDescriptor, "info shm_open() failed. in shm_simple_open().");
+
+	return_value = ftruncate(shmInfo->shmInfoFileDescriptor, SHM_INFO_BASE_SIZE);
+	check_return_value(return_value, "info ftruncate() failed. in shm_simple_open().");
+
+	shmInfo->pMappedShmInfoAddr = mmap(nullptr, SHM_INFO_BASE_SIZE, PROT_WRITE|PROT_READ, MAP_SHARED, shmInfo->shmInfoFileDescriptor, 0);
+	check_mmap_return_value(shmInfo->pMappedShmInfoAddr, "mmap() failed. in shm_open().");
+
+	off_t old_shm_size = 0;
+	memcpy(&old_shm_size, shmInfo->pMappedShmInfoAddr, SHM_INFO_BASE_SIZE);
+	print_debug("get from info shm: \033[36m%ld\033[0m\n", old_shm_size);
+
+	if (old_shm_size == 0)
+	{
+		memcpy(shmInfo->pMappedShmInfoAddr, &shmInfo->shmByteSize, SHM_INFO_BASE_SIZE);
 	}
+	else if (old_shm_size < shmInfo->shmByteSize)
+	{
+		memcpy(shmInfo->pMappedShmInfoAddr, &shmInfo->shmByteSize, SHM_INFO_BASE_SIZE);
+	}
+	else
+	{
+		shmInfo->shmByteSize = old_shm_size;
+	}
+	print_debug("shm_size = \033[36m%ld\033[0m ", shmInfo->shmByteSize);
+	print_debug("old_size = \033[36m%ld\033[0m\n", old_shm_size);
+
+	shmInfo->shmFileDescriptor = shm_open(shmInfo->shmName, O_CREAT|O_RDWR, 0777);
+	check_return_value(shmInfo->shmFileDescriptor, "main shm_open() failed. in shm_simple_open().");
+
+	return_value = ftruncate(shmInfo->shmFileDescriptor, shmInfo->shmByteSize);
+	check_return_value(return_value, "main ftruncate() failed. in shm_simple_open().");
+
+	shmInfo->pMappedShmAddr = mmap(nullptr, shmInfo->shmByteSize, PROT_WRITE|PROT_READ, MAP_SHARED, shmInfo->shmFileDescriptor, 0);
+	check_mmap_return_value(shmInfo->pMappedShmAddr, "mmap() failed. in shm_open().");
+
+	return_value = sem_post(shmInfo->pSemaphore);
+	check_return_value(return_value, "sem_post() failed. in shm_simple_open().");
+	return 0;
 }
 
 
-void open_task_shm( int *shm ) {
+int shm_write(struct SharedMemoryInfo *shmInfo, const void const *data, const size_t data_byte_size)
+{
 	errno = 0;
+	int return_value = 0;
+	if (data_byte_size > shmInfo->shmByteSize)
+	{
+		shmInfo->shmByteSize = data_byte_size;
+		sem_wait(shmInfo->pSemaphore);
 
-	if ( (*shm = shm_open(TASK_SHM_NAME, O_CREAT|O_RDWR, 0777)) == -1 ) {
-		fprintf(stderr, "\033[31mshm_open() failed. in open_task_shm(). errno: %s\033[0m\n", strerror(errno));
-	}
-	if ( ftruncate( *shm, SHM_BASE_SIZE+1 ) == -1 ) {
-		fprintf(stderr, "\033[31mftruncate() failed. in open_task_shm(). errno: %s\033[0m\n", strerror(errno));
-	}
-	//fprintf(stderr, "\033[2m\033[32mtask memory open, shm = %d\033[0m\n", shm);
-}
-void open_msg_shm( int *shm ) {
-	errno = 0;
+		memcpy(shmInfo->pMappedShmInfoAddr, &shmInfo->shmByteSize, SHM_INFO_BASE_SIZE);
 
-	if ( (*shm = shm_open(MSG_SHM_NAME, O_CREAT|O_RDWR, 0777)) == -1 ) {
-		fprintf(stderr, "\033[31mshm_open() failed. in open_msg_shm(). errno: %s\033[0m\n", strerror(errno));
-	}
-	if ( ftruncate( *shm, SHM_BASE_SIZE+1 ) == -1 ) {
-		fprintf(stderr, "\033[31mftruncate() failed. in open_msg_shm(). errno: %s\033[0m\n", strerror(errno));
-	}
-	//fprintf(stderr, "\033[2m\033[32mmsg memory open, shm = %d\033[0m\n", shm);
-}
-void open_err_shm( int *shm ) {
-	errno = 0;
+		return_value = ftruncate(shmInfo->shmFileDescriptor, data_byte_size);
+		check_return_value(return_value, "ftruncate() failed. in shm_write().");
 
-	if ( (*shm = shm_open(ERR_SHM_NAME, O_CREAT|O_RDWR, 0777)) == -1 ) {
-		fprintf(stderr, "\033[31mshm_open() failed. in open_err_shm(). errno: %s\033[0m\n", strerror(errno));
+		shmInfo->pMappedShmAddr = mremap(shmInfo->pMappedShmAddr, shmInfo->shmByteSize, data_byte_size, 0, nullptr);
+		check_mmap_return_value(shmInfo->pMappedShmAddr, "mremap() failed. in shm_write().");
 	}
-	if ( ftruncate( *shm, SHM_BASE_SIZE+1 ) == -1 ) {
-		fprintf(stderr, "\033[31mftruncate() failed. in open_err_shm(). errno: %s\033[0m\n", strerror(errno));
-	}
-	//fprintf(stderr, "\033[2m\033[32merr memory open, shm = %d\033[0m\n", shm);
-}
-void open_out_shm( int *shm ) {
-	errno = 0;
 
-	if ( (*shm = shm_open(OUT_SHM_NAME, O_CREAT|O_RDWR, 0777)) == -1 ) {
-		fprintf(stderr, "\033[31shm_open() failed. in open_out_shm(). errno: %s\033[0m\n", strerror(errno));
-	}
-	if ( ftruncate( *shm, SHM_BASE_SIZE+1 ) == -1 ) {
-		fprintf(stderr, "\033[31mftruncate() failed. in open_out_shm(). errno: %s\033[0m\n", strerror(errno));
-	}
-	//fprintf(stderr, "\033[2m\033[32mout memory open, shm = %d\033[0m\n", shm);
+	memcpy(shmInfo->pMappedShmAddr, data, data_byte_size);
+
+	sem_post(shmInfo->pSemaphore);
+	return 0;
 }
 
 
+int shm_destroy(struct SharedMemoryInfo *shmInfo)
+{
+	int return_value = 0;
+	sem_wait(shmInfo->pSemaphore);
 
+	return_value = shm_unlink(shmInfo->shmName);
+	check_return_value(return_value, "info shm_unlink() failed. in shm_write().");
 
+	return_value = shm_unlink(shmInfo->shmInfoName);
+	check_return_value(return_value, "main shm_unlink() failed. in shm_write().");
 
-void write_shm( const int shm, const char msg[] ) {
-	errno = 0;
-	int len = 0;
+	return_value = sem_unlink(shmInfo->shmName);
+	check_return_value(return_value, "sem_unlink() failed. in shm_write().");
 
-	len = strlen( msg );
-	len = len<=SHM_BASE_SIZE ? len : SHM_BASE_SIZE;
-	//fprintf(stderr, "len = %d\n", len);
-
-	char *addr = mmap(0, SHM_BASE_SIZE+1, PROT_WRITE|PROT_READ, MAP_SHARED, shm, 0);
-	if ( addr == MAP_FAILED ) {
-		fprintf(stderr, "\033[31mmmap() failed. in write_shm(). errno: %s\033[0m\n", strerror(errno));
-	}
-
-	//printf("Get from old shared memory: %s\n", addr);
-	memcpy(addr, msg, len);
-	//printf("\033[2m\033[33mshm memory writed.\033[0m\n");
-	//printf("Get from new shared memory: %s\n", addr);
-
-	munmap(addr, SHM_BASE_SIZE);
-}
-
-void read_shm( const int shm, char *msg ) {
-	errno = 0;
-	char *addr = mmap(0, SHM_BASE_SIZE+1, PROT_READ, MAP_SHARED, shm, 0);
-	if ( addr == MAP_FAILED ) {
-		fprintf(stderr, "\033[31mmmap() failed. in read_shm(). errno: %s\033[0m\n", strerror(errno));
-	}
-
-	msg = malloc( sizeof(char) * strlen(addr) );
-	for ( uint16_t i = 0; i < strlen(addr); i++ ) {
-		msg[i] = addr[i];
-	}
-	//printf("Get from old shared memory: %s\n", addr);
-	munmap(addr, SHM_BASE_SIZE);
-}
-
-inline void print_shm( const int shm ) {
-	char *addr = mmap(0, SHM_BASE_SIZE+1, PROT_READ, MAP_SHARED, shm, 0);
-
-	printf("Get from shared memory: %s\n", addr);
-	munmap(addr, SHM_BASE_SIZE);
-}
-
-
-inline void delete_task_shm() {
-	errno = 0;
-	if ( shm_unlink(TASK_SHM_NAME) == -1 ) {
-		fprintf(stderr, "\033[31mshm_unlink() failed. in delete_task_shm(). errno: %s\033[0m\n", strerror(errno));
-	}
-}
-inline void delete_msg_shm() {
-	errno = 0;
-	if ( shm_unlink(MSG_SHM_NAME) == -1 ) {
-		fprintf(stderr, "\033[31mshm_unlink() failed. in delete_msg_shm(). errno: %s\033[0m\n", strerror(errno));
-	}
-}
-inline void delete_err_shm() {
-	errno = 0;
-	if ( shm_unlink(ERR_SHM_NAME) == -1 ) {
-		fprintf(stderr, "\033[31mshm_unlink() failed. in delete_err_shm(). errno: %s\033[0m\n", strerror(errno));
-	}
-}
-inline void delete_out_shm() {
-	errno = 0;
-	if ( shm_unlink(OUT_SHM_NAME) == -1 ) {
-		fprintf(stderr, "\033[31mshm_unlink() failed. in delete_out_shm(). errno: %s\033[0m\n", strerror(errno));
-	}
+	sem_post(shmInfo->pSemaphore);
+	return 0;
 }
