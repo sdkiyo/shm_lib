@@ -11,18 +11,18 @@ git clone https://github.com/waflya-xleb/shm_lib.git
 ### compilation
 1. go to the build directory:
 ~~~shell
-cd имя-репозитория/build
+cd repository-name/build
 ~~~
 2. start compiling:
 ~~~shell
 cmake -G "Ninja" .. && ninja
 ~~~
-To show debug messages when compiling, use cmake flag `'--log-level=DEBUG'`
+To show additional messages when compiling, use cmake flag `'--log-level=DEBUG'`
 ~~~shell
 cmake --log-level=DEBUG -G "Ninja" .. && ninja
 ~~~
 ### adding to project
-after compilation, the `build` directory will contain a file named `lib_SharedMemoryLibrary.so`, it needs to be moved to the directory where the executable file of your program will be located. The header file `shm_api.h` from the library will need to be added to the project itself.
+after compilation, the `build` directory will contain a file named `lib_shmApi.so`, it needs to be moved to the directory where the executable file of your program will be located. The header file `shm_api.h` from the library will need to be added to the project itself.
 ___
 ## License
 This project uses the [GNU AGPLv3](https://choosealicense.com/licenses/agpl-3.0/#) license.

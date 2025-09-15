@@ -1,9 +1,10 @@
-set ("VERSION_RELEASE" 0)
-set ("VERSION_DEV" 1)
-set ("ver" ${VERSION_RELEASE}.${VERSION_DEV})
+set(version_major 0)
+set(version_minor 0)
+set(version_build 3)
+set(version_stage "a")
+set(version ${version_major}.${version_minor}.${version_build}-${version_stage})
 
-set (CMAKE_C_STANDARD 23)
-
+set(CMAKE_C_STANDARD 23)
 
 string(ASCII 27 Esc)
 set(rc		"${Esc}[0m")# reset_color

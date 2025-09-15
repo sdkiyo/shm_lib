@@ -10,10 +10,10 @@
 #include <errno.h>
 #include <semaphore.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 // date types
 #include <string.h>
-#include <unistd.h>
 #include <stdint.h>
 
 // платформозависимые решения
