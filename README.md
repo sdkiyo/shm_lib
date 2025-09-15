@@ -11,7 +11,7 @@ git clone https://github.com/waflya-xleb/shm_lib.git
 ### compilation
 1. go to the build directory:
 ~~~shell
-cd repository-name/build
+cd shm_lib/build
 ~~~
 2. start compiling:
 ~~~shell

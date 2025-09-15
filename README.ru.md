@@ -11,7 +11,7 @@ git clone https://github.com/waflya-xleb/shm_lib.git
 ### компиляция
 1. перейдите в директорию для сборки:
 ~~~shell
-cd имя-репозитория/build
+cd shm_lib/build
 ~~~
 2. начните компиляцию:
 ~~~shell
